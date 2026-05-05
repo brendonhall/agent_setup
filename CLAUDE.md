@@ -37,6 +37,8 @@ Conflicts (a real file or a symlink pointing elsewhere at the destination) are r
 
 Both existing artifacts assume `~/.claude/CLAUDE.md` exists on the host machine and carries the user's stylistic/voice preferences. Treat that file as authoritative for voice; this repo's content layers process and structure on top.
 
+Some artifacts also depend on out-of-repo personal-context files at `~/.claude/` that are intentionally not version-controlled. The first example is `~/.claude/sensemake-profile.md` — created and maintained via the `sensemake-profile-builder` skill, read by the `/sensemake` command. When adding a new artifact that relies on out-of-repo personal context, document the file path and how it gets created.
+
 ## Working in this repo
 
 When adding or editing a skill or command, the only validation is that the file parses as Markdown (and, for skills, that the frontmatter is valid YAML). There is no linter or test suite to run.
