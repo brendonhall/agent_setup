@@ -46,6 +46,18 @@ Checks claims-vs-evidence (including whether each `[Author Year]` actually suppo
 /peer-review editor abstract.md
 ```
 
+### `/sensemake`
+
+Structured analysis of an article using the method from [How to Make Sense of AI](https://commoncog.com/how-to-make-sense-of-ai), generalized to any fast-moving domain. Reads the user's profile at `~/.claude/sensemake-profile.md`, classifies the input as OPINION / FIELD REPORT / MIXED, and produces an eight-section response: source line, classification, core ideas, field evidence, constraints identified or mitigated, impact on your objectives, possible actions, and a one-line verdict.
+
+Argument is the article: a URL (fetched), a file path (read), or pasted text. If the profile file is missing, the command refuses and points to the `sensemake-profile-builder` skill.
+
+```
+/sensemake https://example.com/some-article
+/sensemake ~/Downloads/article.md
+/sensemake <pasted article body>
+```
+
 ## Skills
 
 Skills are directories under `claude/skills/` so they can carry supporting files alongside `SKILL.md`. Each `SKILL.md` requires YAML frontmatter with `name` and `description` — the description is the trigger contract Claude reads when deciding whether to invoke the skill, so it must state both *when to use* and (where relevant) *when not to*. Skills should defer voice and prose conventions to `~/.claude/CLAUDE.md` rather than redefining them; their job is process and structure.
@@ -66,6 +78,16 @@ Governs process and structure for scientific manuscripts and long-form articles.
 **Workflow.** Fresh drafts: read `CLAUDE.md`, scan the directory, confirm scope (journal/length/audience/argument), propose an outline, draft section-by-section. Revisions: identify the flag, read the surrounding paragraph or section, edit, briefly note non-obvious changes; never silently introduce new claims during a style-only edit.
 
 **Output discipline.** Markdown (`##` for sections, `###` for subsections), LaTeX math (`$...$` inline, `$$...$$` display), figures and tables referred to by number — never invented. When two phrasings or structures are both defensible, present both briefly and ask.
+
+### `sensemake-profile-builder`
+
+Walks the user through creating or updating `~/.claude/sensemake-profile.md` — the personal-context file that the `/sensemake` command reads to ground its impact-on-objectives analysis. Triggers on phrases like *"create my sensemake profile"*, *"update my sensemake profile"*, *"set up sensemaking"*. Not for ad-hoc edits the user can make by hand.
+
+**Hard rules.** Read the existing profile first if present; ask one prompt at a time; never invent or pad content; final draft requires explicit approval before writing the file.
+
+**Workflow.** Five sequential prompts — identity, optimization targets, anti-goals, constraints, leverage — synthesized into 3–5 prose paragraphs (lead = identity), reviewed, then written to disk with a `Last updated:` date. The update flow reads the current profile, summarizes it, and asks whether to revise specific sections or rewrite from scratch.
+
+**Output discipline.** Profile starts with a single `Last updated: YYYY-MM-DD` line, then prose paragraphs. No bulleted lists in the profile itself — prose only. Whole profile under ~500 words.
 
 ## Adding assets
 
