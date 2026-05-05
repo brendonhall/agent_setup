@@ -24,6 +24,7 @@ install:
 	@if [ ! -d "$(SRC)" ]; then echo "error: $(SRC) does not exist"; exit 1; fi
 	@set -e; shopt -s nullglob 2>/dev/null || true; \
 	link_one() { \
+	  local src dst target; \
 	  src="$$1"; dst="$$2"; \
 	  if [ -L "$$dst" ]; then \
 	    target=$$(readlink "$$dst"); \
@@ -66,6 +67,7 @@ status:
 	@if [ ! -d "$(SRC)" ]; then echo "(source missing)"; exit 0; fi
 	@set -e; \
 	report() { \
+	  local src dst target; \
 	  src="$$1"; dst="$$2"; \
 	  if [ -L "$$dst" ]; then \
 	    target=$$(readlink "$$dst"); \
