@@ -25,9 +25,53 @@ claude/
 
 When adding a new asset type, mirror the directory name Claude Code expects under `~/.claude/` (e.g. `hooks/`, `agents/`, `output-styles/`). No Makefile changes needed.
 
+## Workflows
+
+Several artifacts here are designed to compose. Two pipelines are worth naming up front; the per-artifact reference docs below appear in pipeline order within each section.
+
+**Writing.** Long-form pieces move through five stages, four of which live in this repo:
+
+1. The `outline-builder` skill builds the outline structure and owns the format spec at `OUTLINE_FORMAT.md`, which ships inside the skill directory and is read by both outline commands below.
+2. `/outline-critique` reviews the populated outline before any prose is written, catching structural and evidence gaps while they're still cheap to fix.
+3. `/outline-to-draft` converts the approved outline into prose, section-by-section, under strict claims-and-citations discipline.
+4. The `article-writer` skill governs ongoing drafting and revision once a draft exists, including `[STYLE]` and `[IMPROVE]` flag handling.
+5. `/peer-review` is the rigorous post-draft review before submission.
+
+**Sensemaking.** Two artifacts pair to analyze fast-moving fields against your own goals:
+
+1. The `sensemake-profile-builder` skill is run once to create `~/.claude/sensemake-profile.md` (identity, optimization targets, anti-goals, constraints, leverage).
+2. `/sensemake` then uses that profile to classify and analyze articles.
+
 ## Slash commands
 
 Plain Markdown prompts with no frontmatter. The file name becomes the command: `claude/commands/foo.md` → `/foo`. Whatever the user types after the command is substituted for `$ARGUMENTS` at the end of the prompt. Commands address Claude in second person ("You are…"), define defaults plus optional argument modes, and assume `~/.claude/CLAUDE.md` provides voice.
+
+### `/outline-critique`
+
+Pre-draft review of an article outline (the format produced by the `outline-builder` skill). Reads the outline file plus `OUTLINE_FORMAT.md` from the outline-builder skill and `~/.claude/CLAUDE.md`, and checks whether the outline is ready to draft from.
+
+Argument selects scope:
+
+- `gaps` — only check for missing material (unsourced claims, empty sections, weak evidence).
+- `structure` — only check argument flow and section ordering.
+- `full` *(default)* — both, plus scope, fit, and audience match.
+
+Output is fixed: one-sentence readiness assessment, numbered blockers, numbered significant gaps, optional suggestions, and one closing line (ready / minor fixes / major revision needed). Diagnoses only; does not edit the outline — for edits, the user invokes the `outline-builder` skill.
+
+```
+/outline-critique outline.md
+/outline-critique gaps outline.md
+```
+
+### `/outline-to-draft`
+
+Converts a populated outline into prose, section-by-section, under strict rules: every must-establish claim from the outline appears in the draft, no new major claims are introduced, every cited claim is backed by a real source from the outline (missing sources surface as `[CITATION NEEDED: …]`, never invented), and section length lands within ±20% of the target. Reads every referenced source before drafting and flags any that are missing.
+
+Writes directly to a draft file (default `draft.md` alongside the outline) and updates the outline's `status` field as drafting progresses; the rest of the outline is left untouched. Drafts one section at a time with review pauses.
+
+```
+/outline-to-draft outline.md
+```
 
 ### `/peer-review`
 
@@ -61,6 +105,22 @@ Argument is the article: a URL (fetched), a file path (read), or pasted text. If
 ## Skills
 
 Skills are directories under `claude/skills/` so they can carry supporting files alongside `SKILL.md`. Each `SKILL.md` requires YAML frontmatter with `name` and `description` — the description is the trigger contract Claude reads when deciding whether to invoke the skill, so it must state both *when to use* and (where relevant) *when not to*. Skills should defer voice and prose conventions to `~/.claude/CLAUDE.md` rather than redefining them; their job is process and structure.
+
+### `outline-builder`
+
+Builds and refines article and manuscript outlines before any prose is drafted. Owns the outline format spec at `OUTLINE_FORMAT.md`, which ships inside the skill directory and is also read by `/outline-critique` and `/outline-to-draft`. Triggers on requests to outline a paper, sketch a manuscript, or plan an article. Not for short pieces (under ~800 words), and never drafts prose itself — for prose, defer to `article-writer` or `/outline-to-draft`.
+
+**Hard rules.**
+
+1. Never draft prose. Outlines contain bullets, claims, and notes; if asked to "flesh out" a section into prose, decline and refer onward.
+2. Probe for the four inputs — topic, audience, target publication, technical depth — before generating a skeleton.
+3. Publication shapes structure: research articles, letters, reviews, popular science, and blog posts each get different conventions. If the venue is unfamiliar, ask the user to point at one or two recent examples in `refs/`.
+4. Audience and depth are separate axes (vocabulary vs. how far into the technical core), both encoded in frontmatter and respected in section function descriptions.
+5. Skeleton ≠ filled outline. First pass is structural (headings, function, length target, must-establish claims); Notes/Sources/Figures slots are scaffolded but empty for the user to populate. Never invent notes or sources.
+
+**Workflow.** Skeleton: confirm the four inputs, propose a flat outline (headings + one-line function each), wait for approval, expand to the full template, save as `outline.md` with `status: skeleton`. Iterating on a skeleton: reorder, split, merge, rename, revise length targets — but don't add Notes or Sources. Iterating on a populated outline: respect user-added content (suggest, don't overwrite), may identify gaps or propose restructuring if the notes reveal the original shape doesn't fit.
+
+**Output discipline.** Always write or update the outline file directly; don't paste outlines into chat for the user to copy. After any modification, briefly summarize what changed.
 
 ### `article-writer`
 
